@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+    <title>Stave Warp</title>
+  </head>
+  <body>
+    <main class="app">
+      <div class="stage" id="stage"></div>
+
+      <aside class="panel">
+        <h1 class="logo">Stave Warp</h1>
+
+        <section>
+          <h2>Stave</h2>
+          <div class="sliders" id="stave-sliders"></div>
+        </section>
+
+        <section>
+          <div class="section-head">
+            <h2>Warp</h2>
+            <button class="switch" id="warp-switch" role="switch" aria-checked="true" aria-label="Warp"></button>
+          </div>
+          <div class="sliders" id="warp-sliders"></div>
+        </section>
+
+        <section>
+          <h2>Time</h2>
+          <div class="sliders" id="time-sliders"></div>
+        </section>
+
+        <section>
+          <h2>Colour</h2>
+          <div class="sliders" id="stroke-slider"></div>
+          <div class="grid cols-3 swatches">
+            <label class="swatch"><input type="color" id="line-colour" /><span>Line</span></label>
+            <label class="swatch"><input type="color" id="echo-colour" /><span>Echo</span></label>
+            <label class="swatch"><input type="color" id="background-colour" /><span>Background</span></label>
+          </div>
+        </section>
+
+        <section>
+          <h2>Quick Actions</h2>
+          <div class="grid cols-2">
+            <button class="tile" id="play">Pause</button>
+            <button class="tile" id="new-warp">New Warp</button>
+            <button class="tile" id="randomize">Randomize</button>
+            <button class="tile" id="reset">Reset</button>
+          </div>
+        </section>
+
+        <section>
+          <h2>Export</h2>
+          <div class="grid cols-2">
+            <button class="tile" id="save-png">Save PNG</button>
+            <button class="tile" id="save-svg">Save SVG</button>
+            <button class="tile" id="record">Record</button>
+            <button class="tile" id="copy-settings">Copy Settings</button>
+          </div>
+        </section>
+
+        <footer class="hint" id="hint" role="status">Space to pause · ⌘S to save PNG</footer>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
