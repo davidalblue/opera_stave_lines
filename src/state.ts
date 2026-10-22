@@ -14,6 +14,8 @@ const DEFAULTS = {
   tension: 99,
   noise: 0,
   variation: 32,
+  // Continuous: the lines run edge to edge, their ends pinned just off-screen
+  join: false,
   // Soundwave: the lines only move up and down, as waves travelling along the stave.
   // Warp and Soundwave take turns; with both off the stave is still.
   sound: false,

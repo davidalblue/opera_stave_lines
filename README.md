@@ -25,6 +25,7 @@ pnpm dev
 | | Tension | How tightly it bends. Low gives long sweeps, high gives small curls |
 | | Noise | A fine wobble on top |
 | | Variation | How differently each line moves, from a stave that stays together to lines that split apart |
+| | Continuous | The lines run the whole width, their ends pinned just outside the left and right edges, so no line ends show. The warp eases off towards the pinned ends |
 | Soundwave | (switch) | Turning Soundwave on turns Warp off, and the other way round |
 | | Amplitude | How high the waves rise |
 | | Pitch | How many waves fit along the stave |

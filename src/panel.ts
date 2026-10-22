@@ -44,7 +44,9 @@ export function initPanel(actions: Actions) {
   // the size fields are dimmed while the canvas fits the window
   addSync(() => $('.size-row').classList.toggle('is-dim', state.canvasFit))
 
-  $('#stave-sliders').append(num('Lines', 'lines'), num('Spacing', 'spacing'), num('Length', 'length'))
+  // with Continuous on, the stave always runs the full width
+  const sized = () => !(state.warp && state.join)
+  $('#stave-sliders').append(num('Lines', 'lines'), num('Spacing', 'spacing'), num('Length', 'length', sized, 'Full'))
 
   // Warp and Soundwave take turns: switching one on switches the other off
   toggle($('#warp-switch'), {
@@ -60,6 +62,9 @@ export function initPanel(actions: Actions) {
     num('Noise', 'noise', warping),
     num('Variation', 'variation', warping),
   )
+  // Continuous only shapes the Warp
+  const join = toggle($('#join'), { get: () => state.join, set: (v) => (state.join = v) })
+  addSync(() => ((join as HTMLButtonElement).disabled = !state.warp))
 
   toggle($('#sound-switch'), {
     get: () => state.sound,

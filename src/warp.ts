@@ -106,7 +106,10 @@ export function buildFrame(w: number, h: number, time: number): Frame {
 
   const lines = state.lines
   const gap = S * (0.004 + 0.0006 * state.spacing)
-  const len = w * (state.length / 100)
+  // Continuous: the lines run the whole width, from just outside the left edge to just outside the
+  // right, with their ends pinned there, so they always come in and go out off-screen
+  const pinned = warp && state.join
+  const len = pinned ? w + S * 0.1 : w * (state.length / 100)
   const left = (w - len) / 2
   const mid = h / 2
 
@@ -165,6 +168,16 @@ export function buildFrame(w: number, h: number, time: number): Frame {
     }
   }
 
+  // how far each point may move when the ends are pinned: nothing at the ends, easing up to the
+  // full warp away from them
+  const pin = new Float64Array(points).fill(1)
+  if (pinned) {
+    for (let s = 0; s < points; s++) {
+      const e = Math.sin((Math.PI * s) / (points - 1))
+      pin[s] = e * (2 - e)
+    }
+  }
+
   // the Envelope: from the same height all along (0) to silent at both ends (1)
   const envelope = new Float64Array(points)
   for (let s = 0; s < points; s++) envelope[s] = 1 - fade * (1 - Math.sin((Math.PI * s) / (points - 1)) ** 2)
@@ -209,6 +222,8 @@ export function buildFrame(w: number, h: number, time: number): Frame {
 
       const out = new Float32Array(points * 2)
       for (let s = 0; s < points; s++) {
+        dx[s] *= pin[s]
+        dy[s] *= pin[s]
         out[s * 2] = left + s * step + dx[s]
         out[s * 2 + 1] = y + dy[s]
         sumX += dx[s]
@@ -217,7 +232,8 @@ export function buildFrame(w: number, h: number, time: number): Frame {
       staff.push(out)
     }
     // the stave warps in place rather than wandering off: each echo's average push is taken out
-    if (warp) {
+    // (pinned ends already hold it in place)
+    if (warp && !pinned) {
       const mx = sumX / (lines * points)
       const my = sumY / (lines * points)
       for (const line of staff) {
