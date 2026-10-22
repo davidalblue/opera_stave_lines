@@ -84,6 +84,24 @@ export function colour(input: HTMLInputElement, bind: Bind<string>) {
   })
 }
 
+/** A number typed into `input`, kept within `range` and applied on Enter or when leaving the field. */
+export function numberField(input: HTMLInputElement, bind: Bind<number>, range: Range) {
+  input.min = String(range[0])
+  input.max = String(range[1])
+  input.addEventListener('change', () => {
+    const v = Math.round(Number(input.value))
+    if (input.value.trim() !== '' && Number.isFinite(v)) bind.set(Math.min(range[1], Math.max(range[0], v)))
+    onChange()
+  })
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') input.blur()
+  })
+  syncs.push(() => {
+    // leave it alone while it's being typed into
+    if (document.activeElement !== input) input.value = String(bind.get())
+  })
+}
+
 /** A slider over `range()`; it's disabled (showing `disabledText`) while `range()` is null. */
 export function slider(label: string, bind: Bind<number>, range: () => Range | null, disabledText = '–') {
   const row = el('div', { class: 'slider' })

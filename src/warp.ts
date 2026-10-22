@@ -1,6 +1,8 @@
-// The stave and its warp. Each point of each line is pushed sideways and up/down by a sum of smooth
-// waves that drift over time. Echoes are the same stave drawn at earlier moments, so wherever the
-// warp moves fast the lines fan out into ribbons.
+// The stave and how it moves. Warp pushes each point of each line sideways and up/down by a sum of
+// smooth waves that drift over time, so the lines fold and loop. Soundwave only moves the lines up
+// and down, as waves travelling along the stave. Echoes are the same stave drawn at earlier moments,
+// so wherever the lines move fast they fan out into ribbons.
+import { melody } from './melody'
 import { state } from './state'
 
 /** One stave line as x, y pairs. */
@@ -26,14 +28,27 @@ type Wave = {
   shift: number
 }
 
+/** One harmonic of the Soundwave. */
+type Partial = {
+  // how far off an exact multiple of the pitch it is, so the harmonics drift against each other
+  detune: number
+  // how fast it travels along the stave, and where it starts
+  rate: number
+  phase: number
+  // how fast and from where it swells and fades
+  swell: number
+  swellPhase: number
+}
+
 const MAIN_WAVES = 5
+const PARTIALS = 6
 const NOISE_WAVES = 6
 // most points worked out and drawn per frame, across all lines and echoes
 const POINT_BUDGET = 200_000
 // how many bunches Clump gathers the echoes into
 const BUNCHES = 4
 
-let cached: { seed: number; main: Wave[]; noise: Wave[] } | null = null
+let cached: { seed: number; main: Wave[]; noise: Wave[]; partials: Partial[] } | null = null
 
 function wavesFor(seed: number) {
   if (cached?.seed === seed) return cached
@@ -68,15 +83,26 @@ function wavesFor(seed: number) {
     }
     return waves
   }
-  cached = { seed, main: make(MAIN_WAVES), noise: make(NOISE_WAVES) }
+  // The Soundwave's harmonics draw from a separate run of random numbers, so adding them didn't
+  // change the Warp's waves: a seed gives the same warp as before Soundwave existed.
+  const soundRand = mulberry32(seed)
+  const partials = Array.from({ length: PARTIALS }, (_, i) => ({
+    detune: i === 0 ? 1 : 1 + (soundRand() - 0.5) * 0.06,
+    rate: 2.5 * Math.sqrt(i + 1) * (1 + soundRand() * 0.3),
+    phase: soundRand() * Math.PI * 2,
+    swell: 0.3 + soundRand() * 0.6,
+    swellPhase: soundRand() * Math.PI * 2,
+  }))
+  cached = { seed, main: make(MAIN_WAVES), noise: make(NOISE_WAVES), partials }
   return cached
 }
 
 /** The stave on a `w`×`h` canvas at `time`, with its echoes. */
 export function buildFrame(w: number, h: number, time: number): Frame {
-  const { main, noise } = wavesFor(state.seed)
+  const { main, noise, partials } = wavesFor(state.seed)
   const S = Math.min(w, h)
   const warp = state.warp
+  const sound = !warp && state.sound
 
   const lines = state.lines
   const gap = S * (0.004 + 0.0006 * state.spacing)
@@ -89,15 +115,26 @@ export function buildFrame(w: number, h: number, time: number): Frame {
   const flow = warp ? (state.flow / 100) * S * 0.5 : 0
   const k = 1.5 + (state.tension / 100) * 10
   const fizz = warp ? (state.noise / 100) * S * 0.05 : 0
-  const clump = warp ? state.clump / 100 : 0
   const vary = (state.variation / 100) * 0.9
 
-  // echoes are spread evenly over the trail; Elasticity sets how far back it reaches
-  const echoes = warp ? state.echoes : 1
-  const trail = (state.elasticity / 100) * 1.6
+  // Soundwave: Amplitude is how high the waves rise, Pitch how many fit along the stave, Harmonics
+  // how much the higher ones add, Envelope how much the wave fades towards the ends of the stave
+  const amp = sound ? (state.amplitude / 100) * S * 0.25 : 0
+  const cycles = 0.5 + (state.pitch / 100) * 24
+  const overtone = state.harmonics / 100
+  const fade = state.envelope / 100
+  const phase = (state.phase / 100) * Math.PI * 0.5
 
-  // about one point every 5px along the stave, fewer when there are many lines and echoes
-  const points = Math.max(40, Math.min(Math.round(len / 5), Math.floor(POINT_BUDGET / (lines * echoes))))
+  // echoes are spread evenly over the trail; Elasticity sets how far back it reaches
+  const moving = warp || sound
+  const clump = moving ? state.clump / 100 : 0
+  const echoes = moving ? state.echoes : 1
+  // sound waves travel fast, so their trail is shorter
+  const trail = (state.elasticity / 100) * (sound ? 0.1 : 1.6)
+
+  // a point every 5px along the stave (2px for the finer sound waves), fewer when there are many
+  // lines and echoes
+  const points = Math.max(40, Math.min(Math.round(len / (sound ? 2 : 5)), Math.floor(POINT_BUDGET / (lines * echoes))))
   const step = len / (points - 1)
   const dx = new Float64Array(points)
   const dy = new Float64Array(points)
@@ -128,6 +165,32 @@ export function buildFrame(w: number, h: number, time: number): Frame {
     }
   }
 
+  // the Envelope: from the same height all along (0) to silent at both ends (1)
+  const envelope = new Float64Array(points)
+  for (let s = 0; s < points; s++) envelope[s] = 1 - fade * (1 - Math.sin((Math.PI * s) / (points - 1)) ** 2)
+
+  const tune = { seed: state.seed, amount: state.melody / 100, beats: 1 + (state.notes / 100) * 23, voices: state.voices / 100 }
+  const wave = new Float64Array(points)
+  const level = new Float64Array(points)
+  // radians of the base pitch's wave per beat
+  const perBeat = (Math.PI * 2 * cycles) / tune.beats
+
+  /** Adds the Soundwave's up-and-down movement to dy for line `line`. */
+  const ring = (t: number, line: number, lineShift: number) => {
+    melody(wave, level, line, t, tune)
+    // each harmonic is quieter than the last by `overtone`, and swells and fades on its own
+    let total = 0
+    for (let p = 0; p < partials.length; p++) total += overtone ** p
+    partials.forEach((pt, p) => {
+      const n = p + 1
+      const size = ((amp * overtone ** p) / total) * (0.6 + 0.4 * Math.sin(pt.swell * t + pt.swellPhase))
+      if (size < 0.01) return
+      const k = perBeat * n * pt.detune
+      const start = pt.phase - pt.rate * t + lineShift * n
+      for (let s = 0; s < points; s++) dy[s] += Math.sin(k * wave[s] + start) * size * envelope[s] * level[s]
+    })
+  }
+
   const frame: Frame = []
   for (let e = 0; e < echoes; e++) {
     const t = echoes > 1 ? time - trail * (1 - bunched(e / (echoes - 1), clump)) : time
@@ -142,6 +205,7 @@ export function buildFrame(w: number, h: number, time: number): Frame {
       dy.fill(0)
       if (flow) push(main, flow, k, y, t, fromMiddle * vary)
       if (fizz) push(noise, fizz, k * 4, y, t * 3, 0)
+      if (amp) ring(t, i, fromMiddle * phase)
 
       const out = new Float32Array(points * 2)
       for (let s = 0; s < points; s++) {
@@ -153,12 +217,14 @@ export function buildFrame(w: number, h: number, time: number): Frame {
       staff.push(out)
     }
     // the stave warps in place rather than wandering off: each echo's average push is taken out
-    const mx = sumX / (lines * points)
-    const my = sumY / (lines * points)
-    for (const line of staff) {
-      for (let i = 0; i < line.length; i += 2) {
-        line[i] -= mx
-        line[i + 1] -= my
+    if (warp) {
+      const mx = sumX / (lines * points)
+      const my = sumY / (lines * points)
+      for (const line of staff) {
+        for (let i = 0; i < line.length; i += 2) {
+          line[i] -= mx
+          line[i + 1] -= my
+        }
       }
     }
     frame.push(staff)
@@ -186,8 +252,11 @@ export function echoColour(e: number, count: number) {
   return `rgb(${mix(0)} ${mix(1)} ${mix(2)})`
 }
 
-export function drawFrame(ctx: CanvasRenderingContext2D, frame: Frame) {
-  ctx.lineWidth = state.stroke / 10
+/** Line width in px. Stroke is set for an 800px canvas and grows with it, so every size looks alike. */
+const lineWidth = (w: number, h: number) => (state.stroke / 10) * (Math.min(w, h) / 800)
+
+export function drawFrame(ctx: CanvasRenderingContext2D, frame: Frame, w: number, h: number) {
+  ctx.lineWidth = lineWidth(w, h)
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
   frame.forEach((staff, e) => {
@@ -216,7 +285,7 @@ export function frameSvg(frame: Frame, w: number, h: number) {
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`,
     `<rect width="100%" height="100%" fill="${state.background}"/>`,
-    `<g fill="none" stroke-width="${state.stroke / 10}" stroke-linecap="round" stroke-linejoin="round">`,
+    `<g fill="none" stroke-width="${lineWidth(w, h).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round">`,
     ...paths,
     '</g></svg>',
   ].join('\n')

@@ -44,12 +44,14 @@ body {
   position: relative;
   flex: 1;
   min-width: 0;
-  background: #000;
+  background: #141414;
 }
 
 .stage canvas {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: block;
   /* dragging on the canvas shouldn't scroll or zoom the page on touch screens */
   touch-action: none;
@@ -100,6 +102,11 @@ h2 {
 
 .cols-4 {
   grid-template-columns: repeat(4, 1fr);
+}
+
+.cols-5 {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
 }
 
 .tile {
@@ -290,6 +297,72 @@ h2 {
 .slider.is-disabled .track {
   cursor: default;
   pointer-events: none;
+}
+
+/* A fixed-size canvas, scaled to fit the stage, with an edge so a black canvas still shows */
+
+.stage canvas.is-fixed {
+  box-shadow: 0 0 0 1px #3a3a3a;
+}
+
+/* Canvas width × height */
+
+.size-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  transition: opacity 0.15s;
+}
+
+.size-row.is-dim {
+  opacity: 0.5;
+}
+
+.size {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+.size span {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+.size input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 12px 0 32px;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: text;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.size input::-webkit-inner-spin-button,
+.size input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.size input:focus-visible {
+  outline: 1px solid var(--text);
+  outline-offset: 2px;
+}
+
+.times {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 /* Colour swatches: the whole tile is the colour, with its name underneath */

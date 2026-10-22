@@ -17,6 +17,16 @@
         <h1 class="logo">Stave Warp</h1>
 
         <section>
+          <h2>Canvas</h2>
+          <div class="grid cols-5" id="canvas-sizes"></div>
+          <div class="size-row">
+            <label class="size"><span>W</span><input class="tile" id="canvas-w" type="number" inputmode="numeric" aria-label="Canvas width in pixels" /></label>
+            <span class="times">×</span>
+            <label class="size"><span>H</span><input class="tile" id="canvas-h" type="number" inputmode="numeric" aria-label="Canvas height in pixels" /></label>
+          </div>
+        </section>
+
+        <section>
           <h2>Stave</h2>
           <div class="sliders" id="stave-sliders"></div>
         </section>
@@ -27,6 +37,14 @@
             <button class="switch" id="warp-switch" role="switch" aria-checked="true" aria-label="Warp"></button>
           </div>
           <div class="sliders" id="warp-sliders"></div>
+        </section>
+
+        <section>
+          <div class="section-head">
+            <h2>Soundwave</h2>
+            <button class="switch" id="sound-switch" role="switch" aria-checked="false" aria-label="Soundwave"></button>
+          </div>
+          <div class="sliders" id="sound-sliders"></div>
         </section>
 
         <section>
