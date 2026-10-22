@@ -10,12 +10,12 @@ const DEFAULTS = {
   length: 100,
   // Warp: a smooth field that pushes the stave around in both directions
   warp: true,
-  flow: 100,
-  tension: 99,
-  noise: 0,
-  variation: 32,
+  flow: 41,
+  tension: 0,
+  noise: 100,
+  variation: 31,
   // Continuous: the lines run edge to edge, their ends pinned just off-screen
-  join: false,
+  join: true,
   // Soundwave: the lines only move up and down, as waves travelling along the stave.
   // Warp and Soundwave take turns; with both off the stave is still.
   sound: false,
@@ -29,18 +29,20 @@ const DEFAULTS = {
   melody: 70,
   notes: 30,
   voices: 30,
+  // Audio: how strongly the lines react to the sound
+  sensitivity: 50,
   // Time: how fast the field changes, and the trail of earlier staves (Clump bunches it up)
   speed: 100,
-  echoes: 30,
-  elasticity: 31,
-  clump: 0,
+  echoes: 17,
+  elasticity: 69,
+  clump: 27,
   // Look
   stroke: 6,
-  lineColour: '#002e7a',
-  echoColour: '#0433ff',
+  lineColour: '#ff2600',
+  echoColour: '#5c0700',
   background: '#000000',
   // which warp: a new seed is a new set of waves
-  seed: 964539230,
+  seed: 193717071,
 }
 
 export type State = typeof DEFAULTS
@@ -66,6 +68,7 @@ export const RANGES: Record<NumberKey, [number, number]> = {
   melody: [0, 100],
   notes: [0, 100],
   voices: [0, 100],
+  sensitivity: [0, 100],
   speed: [0, 100],
   echoes: [1, 100],
   elasticity: [0, 100],

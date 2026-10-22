@@ -49,6 +49,20 @@
         </section>
 
         <section>
+          <div class="section-head">
+            <h2>Audio</h2>
+            <button class="switch" id="audio-switch" role="switch" aria-checked="false" aria-label="Audio"></button>
+          </div>
+          <div class="grid cols-2">
+            <button class="tile" id="audio-upload">Upload MP3 / MP4</button>
+            <button class="tile" id="audio-play">Play</button>
+          </div>
+          <input type="file" id="audio-file" accept="audio/*,video/mp4,.mp3,.mp4,.m4a,.wav" hidden />
+          <div class="sliders" id="audio-sliders"></div>
+          <p class="note" id="audio-note">Upload a song for the lines to react to</p>
+        </section>
+
+        <section>
           <h2>Time</h2>
           <div class="sliders" id="time-sliders"></div>
         </section>

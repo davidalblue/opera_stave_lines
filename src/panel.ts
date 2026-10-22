@@ -1,5 +1,6 @@
+import { clockTime, duration, load, onPlayback, pause, play, player, playing, position, seek } from './audio'
 import { CANVAS_PRESETS, clock, newWarp, randomize, RANGES, reset, state, type NumberKey } from './state'
-import { $, addSync, button, choice, colour, numberField, onPanelChange, slider, syncPanel, toggle, type Bind } from './ui'
+import { $, addSync, button, choice, colour, hint, numberField, onPanelChange, slider, syncPanel, toggle, type Bind, type Slider } from './ui'
 
 /** Binds a slider to a number in the state, over its range. */
 const num = (label: string, key: NumberKey, when: () => boolean = () => true, off = 'Off') => {
@@ -16,12 +17,31 @@ export type Actions = {
   copySettings(): void
 }
 
+let timeSlider: Slider | null = null
+
+/** Moves the audio's Time slider along with the song; run every frame. */
+export function followAudio() {
+  if (player.name) timeSlider?.sync()
+}
+
+/** Plays or pauses the audio, turning the Audio switch on to play. */
+export async function toggleAudio() {
+  if (playing()) {
+    pause()
+    return
+  }
+  player.on = true
+  syncPanel()
+  if (!(await play())) hint(player.name ? "The browser wouldn't play this file" : 'Upload an MP3 or MP4 first', true)
+}
+
 /** Wires the controls in index.html to the state. */
 export function initPanel(actions: Actions) {
   onPanelChange(() => {})
   const warping = () => state.warp
-  const sounding = () => state.sound
-  const moving = () => state.warp || state.sound
+  // the Soundwave's own waves rest while the lines react to audio
+  const sounding = () => state.sound && !player.on
+  const moving = () => state.warp || state.sound || player.on
 
   // Canvas: Fit, a ready-made size, or any width × height
   const sizes = [{ value: 'fit', label: 'Fit' }, ...Object.keys(CANVAS_PRESETS).map((value) => ({ value, label: value }))]
@@ -84,6 +104,36 @@ export function initPanel(actions: Actions) {
     num('Voices', 'voices', sounding),
   )
 
+  // Audio: upload, play and seek a song; while the switch is on the lines only react to it
+  toggle($('#audio-switch'), {
+    get: () => player.on,
+    set: (v) => {
+      player.on = v
+      if (!v) pause()
+      else if (!player.name) hint('Upload an MP3 or MP4 for the lines to react to')
+    },
+  })
+  const file = $<HTMLInputElement>('#audio-file')
+  button($('#audio-upload'), () => file.click())
+  file.addEventListener('change', async () => {
+    const picked = file.files?.[0]
+    file.value = ''
+    if (!picked) return
+    load(picked)
+    player.on = true
+    syncPanel()
+    if (!(await play())) hint('Press Play to start the audio')
+  })
+  const playButton = button($('#audio-play'), () => toggleAudio())
+  timeSlider = slider('Time', { get: position, set: seek }, () => (player.name && duration() ? [0, Math.floor(duration())] : null), '–', clockTime)
+  $('#audio-sliders').append(timeSlider, num('Sensitivity', 'sensitivity'))
+  addSync(() => {
+    playButton.textContent = playing() ? 'Pause' : 'Play'
+    ;(playButton as HTMLButtonElement).disabled = !player.name
+    $('#audio-note').textContent = player.name ? `${player.name} · ${clockTime(duration())}` : 'Upload a song for the lines to react to'
+  })
+  onPlayback(syncPanel)
+
   // echoes only show while the stave is moving
   $('#time-sliders').append(
     num('Speed', 'speed'),
@@ -97,8 +147,9 @@ export function initPanel(actions: Actions) {
   colour($('#echo-colour'), { get: () => state.echoColour, set: (v) => (state.echoColour = v) })
   colour($('#background-colour'), { get: () => state.background, set: (v) => (state.background = v) })
 
-  const play = button($('#play'), () => (clock.playing = !clock.playing))
-  addSync(() => (play.textContent = clock.playing ? 'Pause' : 'Play'))
+  // with the audio on, Pause and Play are the audio's
+  const playAll = button($('#play'), () => (player.on ? toggleAudio() : (clock.playing = !clock.playing)))
+  addSync(() => (playAll.textContent = (player.on ? playing() : clock.playing) ? 'Pause' : 'Play'))
   button($('#new-warp'), newWarp)
   button($('#randomize'), randomize)
   button($('#reset'), reset)

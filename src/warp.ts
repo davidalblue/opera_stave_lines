@@ -2,6 +2,7 @@
 // smooth waves that drift over time, so the lines fold and loop. Soundwave only moves the lines up
 // and down, as waves travelling along the stave. Echoes are the same stave drawn at earlier moments,
 // so wherever the lines move fast they fan out into ribbons.
+import type { Listening } from './audio'
 import { melody } from './melody'
 import { state } from './state'
 
@@ -97,12 +98,19 @@ function wavesFor(seed: number) {
   return cached
 }
 
-/** The stave on a `w`×`h` canvas at `time`, with its echoes. */
-export function buildFrame(w: number, h: number, time: number): Frame {
+/**
+ * The stave on a `w`×`h` canvas at `time`, with its echoes. With `listening`, it reacts to the
+ * audio instead: the Warp moves only as far as the sound pushes it, each line by its own pitch
+ * range, and without the Warp each line draws the sound's waveform.
+ */
+export function buildFrame(w: number, h: number, time: number, listening: Listening | null = null): Frame {
   const { main, noise, partials } = wavesFor(state.seed)
   const S = Math.min(w, h)
   const warp = state.warp
-  const sound = !warp && state.sound
+  const sound = !warp && state.sound && !listening
+  // with the audio on and no Warp, the lines draw the sound's waveform
+  const scope = !warp && listening ? listening : null
+  const sensitivity = state.sensitivity / 50
 
   const lines = state.lines
   const gap = S * (0.004 + 0.0006 * state.spacing)
@@ -129,7 +137,7 @@ export function buildFrame(w: number, h: number, time: number): Frame {
   const phase = (state.phase / 100) * Math.PI * 0.5
 
   // echoes are spread evenly over the trail; Elasticity sets how far back it reaches
-  const moving = warp || sound
+  const moving = warp || sound || !!scope
   const clump = moving ? state.clump / 100 : 0
   const echoes = moving ? state.echoes : 1
   // sound waves travel fast, so their trail is shorter
@@ -137,7 +145,7 @@ export function buildFrame(w: number, h: number, time: number): Frame {
 
   // a point every 5px along the stave (2px for the finer sound waves), fewer when there are many
   // lines and echoes
-  const points = Math.max(40, Math.min(Math.round(len / (sound ? 2 : 5)), Math.floor(POINT_BUDGET / (lines * echoes))))
+  const points = Math.max(40, Math.min(Math.round(len / (sound || scope ? 2 : 5)), Math.floor(POINT_BUDGET / (lines * echoes))))
   const step = len / (points - 1)
   const dx = new Float64Array(points)
   const dy = new Float64Array(points)
@@ -204,6 +212,32 @@ export function buildFrame(w: number, h: number, time: number): Frame {
     })
   }
 
+  // The waveform: each line shows the same moment of sound a little further along than the line
+  // above, so the lines don't all match. The echoes show the last few moments.
+  const WINDOW = 1024
+  const shift = Math.floor(256 / lines)
+  const height = S * 0.3 * sensitivity
+  // the trace eases off towards the ends of the stave, so it meets the margins at the stave line
+  const taper = new Float64Array(points)
+  for (let s = 0; s < points; s++) taper[s] = 0.5 + 0.5 * Math.sin((Math.PI * s) / (points - 1)) ** 2
+  const trailFrames = Math.round((state.elasticity / 100) * 30)
+  /** Adds echo `e`'s waveform to dy for line `line`. */
+  const trace = (heard: Listening, e: number, line: number) => {
+    const waves = heard.waves
+    if (!waves.length) return
+    const back = echoes > 1 ? Math.round((1 - e / (echoes - 1)) * trailFrames) : 0
+    const { data, start } = waves[Math.max(0, waves.length - 1 - back)]
+    const from = start + line * shift
+    for (let s = 0; s < points; s++) dy[s] += data[from + Math.floor((s / (points - 1)) * (WINDOW - 1))] * height * taper[s]
+  }
+
+  // Listening with the Warp: each line is pushed as hard as its pitch range is loud (bass on the
+  // bottom line), plus a share of the overall loudness, so silence leaves the plain stave
+  const loudness = (i: number) => {
+    if (!listening || !warp) return 1
+    return sensitivity * (0.35 * listening.level + 0.65 * listening.bands[lines - 1 - i])
+  }
+
   const frame: Frame = []
   for (let e = 0; e < echoes; e++) {
     const t = echoes > 1 ? time - trail * (1 - bunched(e / (echoes - 1), clump)) : time
@@ -216,9 +250,11 @@ export function buildFrame(w: number, h: number, time: number): Frame {
       const y = mid + fromMiddle * gap
       dx.fill(0)
       dy.fill(0)
-      if (flow) push(main, flow, k, y, t, fromMiddle * vary)
-      if (fizz) push(noise, fizz, k * 4, y, t * 3, 0)
+      const gain = loudness(i)
+      if (flow && gain) push(main, flow * gain, k, y, t, fromMiddle * vary)
+      if (fizz && gain) push(noise, fizz * gain, k * 4, y, t * 3, 0)
       if (amp) ring(t, i, fromMiddle * phase)
+      if (scope) trace(scope, e, i)
 
       const out = new Float32Array(points * 2)
       for (let s = 0; s < points; s++) {

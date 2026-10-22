@@ -102,9 +102,14 @@ export function numberField(input: HTMLInputElement, bind: Bind<number>, range: 
   })
 }
 
-/** A slider over `range()`; it's disabled (showing `disabledText`) while `range()` is null. */
-export function slider(label: string, bind: Bind<number>, range: () => Range | null, disabledText = '–') {
-  const row = el('div', { class: 'slider' })
+export type Slider = HTMLElement & { sync(): void }
+
+/**
+ * A slider over `range()`; it's disabled (showing `disabledText`) while `range()` is null. Its thumb
+ * shows the value as `format` writes it. `sync()` redraws just this slider.
+ */
+export function slider(label: string, bind: Bind<number>, range: () => Range | null, disabledText = '–', format: (v: number) => string = String) {
+  const row = el('div', { class: 'slider' }) as Slider
   const track = el('div', { class: 'track', role: 'slider', tabindex: '0', 'aria-label': label })
   const thumb = el('div', { class: 'thumb' })
   track.append(thumb)
@@ -144,7 +149,7 @@ export function slider(label: string, bind: Bind<number>, range: () => Range | n
     set(bind.get() + delta)
   })
 
-  syncs.push(() => {
+  row.sync = () => {
     const r = range()
     row.classList.toggle('is-disabled', !r)
     track.tabIndex = r ? 0 : -1
@@ -155,12 +160,14 @@ export function slider(label: string, bind: Bind<number>, range: () => Range | n
       return
     }
     const v = Math.round(bind.get())
-    thumb.textContent = String(v)
+    thumb.textContent = format(v)
     thumb.style.left = `calc((100% - var(--thumb-w)) * ${r[1] > r[0] ? (v - r[0]) / (r[1] - r[0]) : 0})`
     track.setAttribute('aria-valuemin', String(r[0]))
     track.setAttribute('aria-valuemax', String(r[1]))
     track.setAttribute('aria-valuenow', String(v))
-  })
+    track.setAttribute('aria-valuetext', format(v))
+  }
+  syncs.push(row.sync)
   return row
 }
 

@@ -1,6 +1,7 @@
 import p5 from 'p5'
 import './style.css'
-import { initPanel } from './panel'
+import { listen, player, recordingTracks } from './audio'
+import { followAudio, initPanel, toggleAudio } from './panel'
 import { clock, decodeSettings, encodeSettings, state } from './state'
 import { hint, syncPanel } from './ui'
 import { buildFrame, drawFrame, frameSvg, type Frame } from './warp'
@@ -45,10 +46,16 @@ new p5((p: p5) => {
 
   p.draw = () => {
     sizeCanvas(p)
-    if (clock.playing) clock.time += (p.deltaTime / 1000) * (state.speed / 100) * 1.5
+    const rate = (p.deltaTime / 1000) * (state.speed / 100) * 1.5
+    // With the audio on, the usual animation stops: the Warp only moves while there's sound, and
+    // as fast as it's loud
+    const listening = player.on ? listen(state.lines) : null
+    if (listening) clock.time += rate * listening.level * 2 * (state.sensitivity / 50)
+    else if (clock.playing) clock.time += rate
+    followAudio()
     frameW = p.width
     frameH = p.height
-    frame = buildFrame(p.width, p.height, clock.time)
+    frame = buildFrame(p.width, p.height, clock.time, listening)
     p.background(state.background)
     drawFrame(p.drawingContext as CanvasRenderingContext2D, frame, p.width, p.height)
     // saved at the end of a frame, after everything is drawn
@@ -69,7 +76,9 @@ window.addEventListener('keydown', (e) => {
   const focused = document.activeElement
   if (e.key === ' ' && !(focused instanceof HTMLButtonElement || focused instanceof HTMLInputElement)) {
     e.preventDefault()
-    clock.playing = !clock.playing
+    // with the audio on, Space plays and pauses the audio
+    if (player.on) toggleAudio()
+    else clock.playing = !clock.playing
     syncPanel()
   }
 })
@@ -98,13 +107,20 @@ function toggleRecording() {
     return
   }
   if (!canvas) return
-  const type = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find((t) => MediaRecorder.isTypeSupported(t))
+  // with the audio on, the video carries its sound
+  const sound = player.on ? recordingTracks() : []
+  const types = sound.length
+    ? ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm']
+    : ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm']
+  const type = types.find((t) => MediaRecorder.isTypeSupported(t))
   if (!type) {
     hint("This browser can't record video", true)
     return
   }
   const chunks: Blob[] = []
-  const rec = new MediaRecorder(canvas.captureStream(60), { mimeType: type, videoBitsPerSecond: 20_000_000 })
+  const stream = canvas.captureStream(60)
+  for (const track of sound) stream.addTrack(track)
+  const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 20_000_000 })
   rec.ondataavailable = (e) => chunks.push(e.data)
   rec.onstop = () => {
     recorder = null

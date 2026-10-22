@@ -35,14 +35,18 @@ pnpm dev
 | | Melody | From one steady tone to a tune: notes with their own pitch (a pentatonic scale) and loudness, rests, held notes, and short glides between them. The tune scrolls along the stave like a score |
 | | Notes | How many notes fit along the stave |
 | | Voices | From every line playing the same tune to each line often playing its own notes |
+| Audio | (switch) | The usual animation stops and the lines only react to the sound. With Warp on, the warp moves only while there's sound, each line pushed by its own pitch range (bass on the bottom line); silence leaves the plain stave. With Warp off, each line draws the sound's waveform, like an oscilloscope |
+| | Upload MP3 / MP4 | Loads a song (or a video's soundtrack) and starts it |
+| | Play / Time | Plays and pauses the song, and shows and seeks where it is, like a music player |
+| | Sensitivity | How strongly the lines react |
 | Time | Speed | How fast the lines move |
 | | Echoes | How many earlier staves are drawn |
 | | Elasticity | How far back the echoes reach, which sets how wide the ribbons are |
 | | Clump | Gathers the echoes into four bunches |
 | Colour | Stroke | Line width |
-| | Line / Echo / Background | The newest stave, the oldest echo (the echoes blend between the two), and the ground. Blue on black to start |
+| | Line / Echo / Background | The newest stave, the oldest echo (the echoes blend between the two), and the ground. Red on black to start |
 
-**Quick actions:** Pause (or Space), New Warp (a different set of waves), Randomize, Reset.
+**Quick actions:** Pause (or Space, which plays and pauses the song while Audio is on), New Warp (a different set of waves), Randomize, Reset.
 
 **Export:** Save PNG (or ⌘S), Save SVG (vector, one path per echo), Record (an MP4 or WebM of the
-canvas until you stop it), and Copy Settings (a link that opens with the same settings and warp).
+canvas until you stop it, with the song's sound while Audio is on), and Copy Settings (a link that opens with the same settings and warp).
