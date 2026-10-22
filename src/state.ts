@@ -6,14 +6,14 @@ const DEFAULTS = {
   canvasH: 1350,
   // Stave
   lines: 5,
-  spacing: 40,
-  length: 70,
+  spacing: 100,
+  length: 100,
   // Warp: a smooth field that pushes the stave around in both directions
   warp: true,
-  flow: 50,
-  tension: 40,
+  flow: 100,
+  tension: 99,
   noise: 0,
-  variation: 10,
+  variation: 32,
   // Soundwave: the lines only move up and down, as waves travelling along the stave.
   // Warp and Soundwave take turns; with both off the stave is still.
   sound: false,
@@ -28,17 +28,17 @@ const DEFAULTS = {
   notes: 30,
   voices: 30,
   // Time: how fast the field changes, and the trail of earlier staves (Clump bunches it up)
-  speed: 25,
+  speed: 100,
   echoes: 30,
-  elasticity: 40,
+  elasticity: 31,
   clump: 0,
   // Look
   stroke: 6,
-  lineColour: '#ffffff',
-  echoColour: '#ffffff',
+  lineColour: '#002e7a',
+  echoColour: '#0433ff',
   background: '#000000',
   // which warp: a new seed is a new set of waves
-  seed: 1,
+  seed: 964539230,
 }
 
 export type State = typeof DEFAULTS

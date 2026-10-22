@@ -39,7 +39,7 @@ pnpm dev
 | | Elasticity | How far back the echoes reach, which sets how wide the ribbons are |
 | | Clump | Gathers the echoes into four bunches |
 | Colour | Stroke | Line width |
-| | Line / Echo / Background | The newest stave, the oldest echo (the echoes blend between the two), and the ground. White on black to start |
+| | Line / Echo / Background | The newest stave, the oldest echo (the echoes blend between the two), and the ground. Blue on black to start |
 
 **Quick actions:** Pause (or Space), New Warp (a different set of waves), Randomize, Reset.
 
