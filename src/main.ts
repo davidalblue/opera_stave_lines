@@ -1,6 +1,6 @@
 import p5 from 'p5'
 import './style.css'
-import { listen, player, recordingTracks } from './audio'
+import { listen, player, playing, recordingTracks } from './audio'
 import { followAudio, initPanel, toggleAudio } from './panel'
 import { clock, decodeSettings, encodeSettings, state } from './state'
 import { hint, syncPanel } from './ui'
@@ -47,11 +47,12 @@ new p5((p: p5) => {
   p.draw = () => {
     sizeCanvas(p)
     const rate = (p.deltaTime / 1000) * (state.speed / 100) * 1.5
-    // With the audio on, the usual animation stops: the Warp only moves while there's sound, and
-    // as fast as it's loud
+    // With the audio on, the usual animation stops: the Warp only moves while there's sound, as
+    // fast as it's loud, and lurches forward on each beat. Pausing the song freezes it.
     const listening = player.on ? listen(state.lines) : null
-    if (listening) clock.time += rate * listening.level * 2 * (state.sensitivity / 50)
-    else if (clock.playing) clock.time += rate
+    if (listening) {
+      if (playing()) clock.time += rate * (listening.level * 3 + listening.kick * 8) * (state.sensitivity / 50)
+    } else if (clock.playing) clock.time += rate
     followAudio()
     frameW = p.width
     frameH = p.height

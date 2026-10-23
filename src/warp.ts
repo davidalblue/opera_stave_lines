@@ -111,6 +111,9 @@ export function buildFrame(w: number, h: number, time: number, listening: Listen
   // with the audio on and no Warp, the lines draw the sound's waveform
   const scope = !warp && listening ? listening : null
   const sensitivity = state.sensitivity / 50
+  // on a beat the lines burst apart, then close up again
+  const kick = listening ? listening.kick : 0
+  const burst = 1 + 1.5 * kick
 
   const lines = state.lines
   const gap = S * (0.004 + 0.0006 * state.spacing)
@@ -216,7 +219,8 @@ export function buildFrame(w: number, h: number, time: number, listening: Listen
   // above, so the lines don't all match. The echoes show the last few moments.
   const WINDOW = 1024
   const shift = Math.floor(256 / lines)
-  const height = S * 0.3 * sensitivity
+  // louder lines swing further, and each beat throws them wider
+  const height = S * 0.45 * sensitivity * burst
   // the trace eases off towards the ends of the stave, so it meets the margins at the stave line
   const taper = new Float64Array(points)
   for (let s = 0; s < points; s++) taper[s] = 0.5 + 0.5 * Math.sin((Math.PI * s) / (points - 1)) ** 2
@@ -228,14 +232,20 @@ export function buildFrame(w: number, h: number, time: number, listening: Listen
     const back = echoes > 1 ? Math.round((1 - e / (echoes - 1)) * trailFrames) : 0
     const { data, start } = waves[Math.max(0, waves.length - 1 - back)]
     const from = start + line * shift
-    for (let s = 0; s < points; s++) dy[s] += data[from + Math.floor((s / (points - 1)) * (WINDOW - 1))] * height * taper[s]
+    const swing = height * (0.8 + 0.6 * heard.bands[lines - 1 - line])
+    for (let s = 0; s < points; s++) dy[s] += data[from + Math.floor((s / (points - 1)) * (WINDOW - 1))] * swing * taper[s]
   }
 
-  // Listening with the Warp: each line is pushed as hard as its pitch range is loud (bass on the
-  // bottom line), plus a share of the overall loudness, so silence leaves the plain stave
+  // Listening with the Warp: the lines move together with the overall loudness, and each line's
+  // own pitch range (bass on the bottom line) adds a little on top, so silence leaves the plain
+  // stave. Each beat shoves every line harder for a moment, and the highs make the lines shiver.
   const loudness = (i: number) => {
     if (!listening || !warp) return 1
-    return sensitivity * (0.35 * listening.level + 0.65 * listening.bands[lines - 1 - i])
+    return sensitivity * 1.6 * (0.7 * listening.level + 0.3 * listening.bands[lines - 1 - i]) * (1 + 1.5 * kick)
+  }
+  const shiver = (i: number) => {
+    if (!listening || !warp) return 1
+    return sensitivity * (0.3 * listening.level + 1.4 * listening.treble + 0.5 * listening.bands[lines - 1 - i]) * (1 + kick)
   }
 
   const frame: Frame = []
@@ -247,12 +257,14 @@ export function buildFrame(w: number, h: number, time: number, listening: Listen
     let sumY = 0
     for (let i = 0; i < lines; i++) {
       const fromMiddle = i - (lines - 1) / 2
-      const y = mid + fromMiddle * gap
+      const y = mid + fromMiddle * gap * burst
       dx.fill(0)
       dy.fill(0)
       const gain = loudness(i)
-      if (flow && gain) push(main, flow * gain, k, y, t, fromMiddle * vary)
-      if (fizz && gain) push(noise, fizz * gain, k * 4, y, t * 3, 0)
+      // beats also set the lines moving apart from each other
+      if (flow && gain) push(main, flow * gain, k, y, t, fromMiddle * vary * burst)
+      const jitter = fizz * shiver(i)
+      if (jitter) push(noise, jitter, k * 4, y, t * 3, 0)
       if (amp) ring(t, i, fromMiddle * phase)
       if (scope) trace(scope, e, i)
 

@@ -35,7 +35,7 @@ pnpm dev
 | | Melody | From one steady tone to a tune: notes with their own pitch (a pentatonic scale) and loudness, rests, held notes, and short glides between them. The tune scrolls along the stave like a score |
 | | Notes | How many notes fit along the stave |
 | | Voices | From every line playing the same tune to each line often playing its own notes |
-| Audio | (switch) | The usual animation stops and the lines only react to the sound. With Warp on, the warp moves only while there's sound, each line pushed by its own pitch range (bass on the bottom line); silence leaves the plain stave. With Warp off, each line draws the sound's waveform, like an oscilloscope |
+| Audio | (switch) | The usual animation stops and the lines only react to the sound. With Warp on, the warp moves only while there's sound, the lines moving together with its loudness (each line's own pitch range adding a little, bass on the bottom line), and the highs making the lines shiver; silence leaves the plain stave. With Warp off, each line draws the sound's waveform, like an oscilloscope, louder lines swinging further. Either way each beat jolts the lines, and pausing the song freezes the stave as it is: they lurch, swing harder and burst apart, then settle |
 | | Upload MP3 / MP4 | Loads a song (or a video's soundtrack) and starts it |
 | | Play / Time | Plays and pauses the song, and shows and seeks where it is, like a music player |
 | | Sensitivity | How strongly the lines react |
