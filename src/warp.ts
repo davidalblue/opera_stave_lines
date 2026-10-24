@@ -317,8 +317,9 @@ export function echoColour(e: number, count: number) {
 }
 
 /** Line width in px. Stroke is set for an 800px canvas and grows with it, so every size looks alike. */
-const lineWidth = (w: number, h: number) => (state.stroke / 10) * (Math.min(w, h) / 800)
+export const lineWidth = (w: number, h: number) => (state.stroke / 10) * (Math.min(w, h) / 800)
 
+/** Draws `frame` the usual way, each line over the ones before; used where WebGL isn't available. */
 export function drawFrame(ctx: CanvasRenderingContext2D, frame: Frame, w: number, h: number) {
   ctx.lineWidth = lineWidth(w, h)
   ctx.lineJoin = 'round'
